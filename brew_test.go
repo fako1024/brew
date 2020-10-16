@@ -24,19 +24,19 @@ func TestParseDataPoints(t *testing.T) {
 	}
 }
 
-func TestScanDataPoints(t *testing.T) {
-
-	scanner := NewScanner(nil, nil)
-	go scanner.Run()
-
-	var dataPoints scale.DataPoints
-	if err := jsoniter.Unmarshal([]byte(standardBrewSingle1JSON), &dataPoints); err != nil {
-		t.Fatalf("Failed to parse JSON: %s", err)
-	}
-
-	for _, dataPoint := range dataPoints {
-		scanner.dataChan <- dataPoint
-	}
-
-	select {}
-}
+// func TestScanDataPoints(t *testing.T) {
+//
+// 	scanner := NewScanner(nil, nil)
+// 	go scanner.Run()
+//
+// 	var dataPoints scale.DataPoints
+// 	if err := jsoniter.Unmarshal([]byte(standardBrewSingle1JSON), &dataPoints); err != nil {
+// 		t.Fatalf("Failed to parse JSON: %s", err)
+// 	}
+//
+// 	for _, dataPoint := range dataPoints {
+// 		scanner.dataChan <- dataPoint
+// 	}
+//
+// 	select {}
+// }
