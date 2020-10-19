@@ -117,10 +117,11 @@ func (s *Scanner) Run() error {
 							TimeStamp: s.currentBrew.Start,
 							Tags:      tags,
 							Data: map[string]interface{}{
-								"start":      s.currentBrew.Start.Unix() * 1000,
-								"end":        s.currentBrew.End.Unix() * 1000,
-								"end_weight": s.currentBrew.DataPoints[len(s.currentBrew.DataPoints)-1].Weight,
-								"unit":       s.currentBrew.DataPoints[len(s.currentBrew.DataPoints)-1].Unit,
+								"start":         s.currentBrew.Start.Unix() * 1000,
+								"end":           s.currentBrew.End.Unix() * 1000,
+								"end_weight":    s.currentBrew.DataPoints[len(s.currentBrew.DataPoints)-1].Weight,
+								"unit":          s.currentBrew.DataPoints[len(s.currentBrew.DataPoints)-1].Unit,
+								"battery_level": s.scale.BatteryLevel(),
 							},
 						},
 					}); err != nil {
