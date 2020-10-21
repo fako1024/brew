@@ -12,8 +12,8 @@ import (
 
 const (
 	defaultDataChanDepth     = 256
-	expectedSingleShotWeight = 40.
-	expectedDoubleShotWeight = 80.
+	expectedSingleShotWeight = 35.
+	expectedDoubleShotWeight = 70.
 
 	minBrewTime = 10 * time.Second
 	maxBrewTime = 60 * time.Second
