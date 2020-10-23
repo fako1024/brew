@@ -4,6 +4,7 @@ import (
 	"math"
 	"time"
 
+	"github.com/fako1024/brew/buffer"
 	"github.com/fako1024/brew/influx"
 	"github.com/fako1024/btscale/pkg/scale"
 	"github.com/google/uuid"
@@ -26,7 +27,7 @@ type Scanner struct {
 	influxDB *influx.EventTracker // The InfluxDb endpoint for data submission
 
 	dataChan    chan scale.DataPoint // The data channel to receive measurements on
-	dataBuf     *DataBuffer          // The ring buffer to keep the last n measurements
+	dataBuf     *buffer.DataBuffer   // The ring buffer to keep the last n measurements
 	currentBrew *Brew                // The currently ongoing brew process
 }
 
@@ -35,7 +36,7 @@ func NewScanner(s scale.Scale, influxDB *influx.EventTracker) *Scanner {
 	return &Scanner{
 		scale:    s,
 		influxDB: influxDB,
-		dataBuf:  NewDataBuffer(1024),
+		dataBuf:  buffer.NewDataBuffer(1024),
 		dataChan: make(chan scale.DataPoint, defaultDataChanDepth),
 	}
 }
@@ -55,19 +56,19 @@ func (s *Scanner) Run() error {
 		last5 := s.dataBuf.LastN(5)
 
 		if !currentlyTrackingBrew {
-			if last5[0].Weight > last5[1].Weight && last5[1].Weight > last5[2].Weight && last5[2].Weight > last5[3].Weight && last5[3].Weight > last5[4].Weight {
+			if last5[0].Value() > last5[1].Value() && last5[1].Value() > last5[2].Value() && last5[2].Value() > last5[3].Value() && last5[3].Value() > last5[4].Value() {
 				s.currentBrew = &Brew{
 					ID:         uuid.New().String(),
-					Start:      last5[4].TimeStamp,
-					DataPoints: scale.DataPoints{last5[4], last5[3], last5[2], last5[1], last5[0]},
+					Start:      last5[4].(scale.DataPoint).TimeStamp,
+					DataPoints: scale.DataPoints{last5[4].(scale.DataPoint), last5[3].(scale.DataPoint), last5[2].(scale.DataPoint), last5[1].(scale.DataPoint), last5[0].(scale.DataPoint)},
 				}
 				logrus.StandardLogger().Infof("Starting tracking brew: %v", last5[0])
 				currentlyTrackingBrew = true
 			}
 		} else {
-			s.currentBrew.DataPoints = append(s.currentBrew.DataPoints, last5[0])
-			if last5[0].Weight-last5[1].Weight < 0.1 && last5[1].Weight-last5[2].Weight < 0.1 && last5[2].Weight-last5[3].Weight < 0.1 && last5[3].Weight-last5[4].Weight < 0.1 {
-				s.currentBrew.End = last5[0].TimeStamp
+			s.currentBrew.DataPoints = append(s.currentBrew.DataPoints, last5[0].(scale.DataPoint))
+			if last5[0].Value()-last5[1].Value() < 0.1 && last5[1].Value()-last5[2].Value() < 0.1 && last5[2].Value()-last5[3].Value() < 0.1 && last5[3].Value()-last5[4].Value() < 0.1 {
+				s.currentBrew.End = last5[0].(scale.DataPoint).TimeStamp
 
 				if s.currentBrew.End.Sub(s.currentBrew.Start) < minBrewTime {
 					logrus.StandardLogger().Errorf("Brew time too short, ignoring data points")
@@ -79,7 +80,7 @@ func (s *Scanner) Run() error {
 					continue
 				}
 
-				if math.Abs(expectedSingleShotWeight-last5[0].Weight) < math.Abs(expectedDoubleShotWeight-last5[0].Weight) {
+				if math.Abs(expectedSingleShotWeight-last5[0].Value()) < math.Abs(expectedDoubleShotWeight-last5[0].Value()) {
 					s.currentBrew.ShotType = SingleShot
 					s.scale.Buzz(1)
 				} else {
