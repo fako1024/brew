@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"os"
 	"os/signal"
 	"syscall"
@@ -11,7 +12,22 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+type config struct {
+	influxEndpoint string
+	influxUser     string
+	influxPassword string
+}
+
 func main() {
+
+	var cfg config
+	flag.StringVar(&cfg.influxEndpoint, "influxEndpoint", "", "Endpoint for InfluxDB emissions")
+	flag.StringVar(&cfg.influxUser, "influxUser", "root", "User for InfluxDB emissions")
+	flag.StringVar(&cfg.influxPassword, "influxPassword", "root", "Password for InfluxDB emissions")
+	flag.Parse()
+	if cfg.influxEndpoint == "" {
+		logrus.StandardLogger().Fatalf("No InfluxDB endpoint specified")
+	}
 
 	s, err := felicita.New()
 	if err != nil {
@@ -28,7 +44,11 @@ func main() {
 		os.Exit(0)
 	}()
 
-	influxDB := influx.NewEventTracker("http://nas.f-ko.eu:8086", "root", "root")
+	influxDB := influx.NewEventTracker(
+		cfg.influxEndpoint,
+		cfg.influxUser,
+		cfg.influxPassword,
+	)
 	scanner := brew.NewScanner(s, influxDB)
 
 	if err := scanner.Run(); err != nil {

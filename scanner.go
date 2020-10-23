@@ -56,7 +56,7 @@ func (s *Scanner) Run() error {
 		last5 := s.dataBuf.LastN(5)
 
 		if !currentlyTrackingBrew {
-			if last5[0].Value() > last5[1].Value() && last5[1].Value() > last5[2].Value() && last5[2].Value() > last5[3].Value() && last5[3].Value() > last5[4].Value() {
+			if lastNIncreasing(last5, 4) {
 				s.currentBrew = &Brew{
 					ID:         uuid.New().String(),
 					Start:      last5[4].(scale.DataPoint).TimeStamp,
@@ -148,4 +148,14 @@ func (s *Scanner) Run() error {
 	}
 
 	return nil
+}
+
+func lastNIncreasing(data buffer.DataPoints, n int) bool {
+	for i := 0; i < n; i++ {
+		if data[i].Value() <= data[i+1].Value() {
+			return false
+		}
+	}
+
+	return true
 }
