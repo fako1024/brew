@@ -55,7 +55,6 @@ func (s *Scanner) Run() error {
 		last5 := s.dataBuf.LastN(5)
 
 		if !currentlyTrackingBrew {
-			logrus.StandardLogger().Infof("%.1f %.1f %.1f %.1f %.1f", last5[0].Weight, last5[1].Weight, last5[2].Weight, last5[3].Weight, last5[4].Weight)
 			if last5[0].Weight > last5[1].Weight && last5[1].Weight > last5[2].Weight && last5[2].Weight > last5[3].Weight && last5[3].Weight > last5[4].Weight {
 				s.currentBrew = &Brew{
 					ID:         uuid.New().String(),
@@ -89,7 +88,7 @@ func (s *Scanner) Run() error {
 				}
 
 				// If brew was successfully tracked, store data into InfluxDB
-				logrus.StandardLogger().Infof("Got brew: %#v", s.currentBrew)
+				logrus.StandardLogger().Infof("Finished tracking brew: %#v", s.currentBrew)
 				if s.influxDB != nil {
 
 					// Generate tags
