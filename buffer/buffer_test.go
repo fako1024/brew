@@ -62,6 +62,11 @@ func TestAddToAndRetrieveFromBuffer(t *testing.T) {
 
 			for k := 1; k <= bufAdd; k++ {
 				lastN := buf.LastN(k)
+
+				if len(lastN) != k {
+					t.Fatalf("Unexpected length of buffer extraction, want %d, have %d", k, len(lastN))
+				}
+
 				for l := 1; l < k; l++ {
 					pos := buf.ptr - 1 - l
 					if pos < 0 {

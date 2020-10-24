@@ -23,8 +23,8 @@ const (
 // Scanner denotes a brew scanner that constantly analyzes weight data from a scale
 // and automatically creates / tracks brews
 type Scanner struct {
-	scale    scale.Scale          // The scale to use for measurement
-	influxDB *influx.EventTracker // The InfluxDb endpoint for data submission
+	scale    scale.Scale // The scale to use for measurement
+	influxDB *influx.DB  // The InfluxDb endpoint for data submission
 
 	dataChan    chan scale.DataPoint // The data channel to receive measurements on
 	dataBuf     *buffer.DataBuffer   // The ring buffer to keep the last n measurements
@@ -32,7 +32,7 @@ type Scanner struct {
 }
 
 // NewScanner initializes a new brew scanner instance
-func NewScanner(s scale.Scale, influxDB *influx.EventTracker) *Scanner {
+func NewScanner(s scale.Scale, influxDB *influx.DB) *Scanner {
 	return &Scanner{
 		scale:    s,
 		influxDB: influxDB,
@@ -151,7 +151,20 @@ func (s *Scanner) Run() error {
 }
 
 func lastNIncreasing(data buffer.DataPoints, n int) bool {
+
+	// Validate data buffer length is sufficient
+	if len(data) < n {
+		return false
+	}
+
 	for i := 0; i < n; i++ {
+
+		// Check if data point is valid
+		if data[i] == nil || data[i+1] == nil {
+			return false
+		}
+
+		// Check if data has increased from step i to i+1
 		if data[i].Value() <= data[i+1].Value() {
 			return false
 		}

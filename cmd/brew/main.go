@@ -44,7 +44,7 @@ func main() {
 		os.Exit(0)
 	}()
 
-	influxDB := influx.NewEventTracker(
+	influxDB := influx.New(
 		cfg.influxEndpoint,
 		cfg.influxUser,
 		cfg.influxPassword,

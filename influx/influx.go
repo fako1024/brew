@@ -17,16 +17,16 @@ type DataPoint struct {
 // DataPoints denotes a list of data points
 type DataPoints []DataPoint
 
-// EventTracker is an event tracker for card and selfieid which writes to influxdb.
-type EventTracker struct {
+// DB is an InfluxDB interface, providing functionality to interact with the database
+type DB struct {
 	config *client.HTTPConfig
 }
 
-// NewEventTracker creates a new event tracker which can transmit events to influxdb.
-func NewEventTracker(endpointURL, username, password string) *EventTracker {
-	return &EventTracker{
+// New creates a new InfluxDB instance
+func New(addr, username, password string) *DB {
+	return &DB{
 		config: &client.HTTPConfig{
-			Addr:     endpointURL,
+			Addr:     addr,
 			Username: username,
 			Password: password,
 		},
@@ -34,10 +34,10 @@ func NewEventTracker(endpointURL, username, password string) *EventTracker {
 }
 
 // EmitDataPoints creates data points and stores it in the underlying Influx database
-func (t *EventTracker) EmitDataPoints(db, measurement string, data DataPoints) error {
+func (d *DB) EmitDataPoints(db, measurement string, data DataPoints) error {
 
 	// Create a new InfluxDB client
-	c, err := client.NewHTTPClient(*t.config)
+	c, err := client.NewHTTPClient(*d.config)
 	if err != nil {
 		return fmt.Errorf("Error creating InfluxDB Client for measurement %s on DB %s: %s", measurement, db, err)
 	}
@@ -61,6 +61,29 @@ func (t *EventTracker) EmitDataPoints(db, measurement string, data DataPoints) e
 	if err = c.Write(bp); err != nil {
 		return fmt.Errorf("Error writing InfluxDB Batch for measurement %s on DB %s: %s", measurement, db, err)
 	}
+
+	return nil
+}
+
+// ModifyMeasurement allows to alter certain elements of a measurement
+func (d *DB) ModifyMeasurement(db, measurement, tag string) error {
+
+	// Create a new InfluxDB client
+	c, err := client.NewHTTPClient(*d.config)
+	if err != nil {
+		return fmt.Errorf("Error creating InfluxDB Client for measurement %s on DB %s: %s", measurement, db, err)
+	}
+	defer c.Close()
+
+	q := client.NewQueryWithParameters("SELECT * FROM ", db, "ns", map[string]interface{}{
+		"M": measurement,
+	})
+	response, err := c.Query(q)
+	if err != nil || response.Error() != nil {
+		return err
+	}
+
+	fmt.Println(response.Results)
 
 	return nil
 }
