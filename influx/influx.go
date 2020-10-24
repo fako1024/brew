@@ -1,6 +1,7 @@
 package influx
 
 import (
+	"encoding/json"
 	"fmt"
 	"time"
 
@@ -66,7 +67,7 @@ func (d *DB) EmitDataPoints(db, measurement string, data DataPoints) error {
 }
 
 // ModifyMeasurement allows to alter certain elements of a measurement
-func (d *DB) ModifyMeasurement(db, measurement, tag string) error {
+func (d *DB) ModifyMeasurement(db, measurement, selectTagName, selectTagValue, replaceTagName, replaceTagValue string) error {
 
 	// Create a new InfluxDB client
 	c, err := client.NewHTTPClient(*d.config)
@@ -75,15 +76,122 @@ func (d *DB) ModifyMeasurement(db, measurement, tag string) error {
 	}
 	defer c.Close()
 
-	q := client.NewQueryWithParameters("SELECT * FROM ", db, "ns", map[string]interface{}{
-		"M": measurement,
+	// Get the column types
+	q := client.NewQueryWithParameters("SHOW FIELD KEYS ON $d FROM $m", db, "ms", client.Params{
+		"d": client.Identifier(db),
+		"m": client.Identifier(measurement),
 	})
 	response, err := c.Query(q)
+	if err != nil || response.Error() != nil {
+		return fmt.Errorf("Failed to query measurement: %s", err)
+	}
+	columnTypes := make(map[string]string)
+	for _, result := range response.Results {
+		for _, ser := range result.Series {
+			for _, row := range ser.Values {
+				columnTypes[row[0].(string)] = row[1].(string)
+			}
+		}
+	}
+
+	// Get the requested measuremet values
+	q = client.NewQueryWithParameters("SELECT * FROM $m WHERE $tag_name = $tag_value", db, "ms", client.Params{
+		"m":         client.Identifier(measurement),
+		"tag_name":  client.Identifier(selectTagName),
+		"tag_value": client.StringValue(selectTagValue),
+	})
+	response, err = c.Query(q)
+	if err != nil || response.Error() != nil {
+		return fmt.Errorf("Failed to query measurement: %s", err)
+	}
+	if len(response.Results) != 1 || len(response.Results[0].Series) != 1 {
+		return fmt.Errorf("Unexpected number of results / series returned, want exactly one")
+	}
+
+	// Generate tags for updated data points
+	tags := map[string]string{
+		selectTagName:  selectTagValue,
+		replaceTagName: replaceTagValue,
+	}
+
+	// Process existing data points
+	var dataPoints DataPoints
+	for _, result := range response.Results {
+		for _, ser := range result.Series {
+
+			for _, row := range ser.Values {
+
+				var (
+					data = make(map[string]interface{})
+					ts   time.Time
+				)
+
+				// Process individual columns
+				for i, col := range ser.Columns {
+
+					// If the column is a tag, ignore it
+					if _, tagExists := tags[col]; tagExists {
+						continue
+					}
+
+					// If the column is the timestamp, parse and convert it
+					if col == "time" {
+						tsParse, err := row[i].(json.Number).Int64()
+						if err != nil {
+							return fmt.Errorf("Failed to convert timestamp: %s", err)
+						}
+						ts = time.Unix(0, tsParse*int64(time.Millisecond))
+						data[col] = ts
+					} else {
+
+						// Check the column type and perform parsing
+						switch columnTypes[col] {
+						case "integer":
+							if intValue, err := row[i].(json.Number).Int64(); err == nil {
+								data[col] = intValue
+							} else {
+								return fmt.Errorf("Failed to parse integer value for column %s", col)
+							}
+						case "float":
+							if floatValue, err := row[i].(json.Number).Float64(); err == nil {
+								data[col] = floatValue
+							} else {
+								return fmt.Errorf("Failed to parse floating point value for column %s", col)
+							}
+						case "string":
+							data[col] = row[i].(string)
+						default:
+							return fmt.Errorf("Failed to find valid type assertion for column %s", col)
+						}
+					}
+				}
+
+				// Append the new data point
+				dataPoints = append(dataPoints, DataPoint{
+					TimeStamp: ts,
+					Data:      data,
+					Tags:      tags,
+				})
+			}
+
+			// Cross check generated data points
+			if len(dataPoints) != len(ser.Values) {
+				return fmt.Errorf("Unexpected length of data points, want %d, have %d", len(ser.Values), len(dataPoints))
+			}
+		}
+	}
+
+	//Drop existing measurement with the provided tag from the DB
+	q = client.NewQueryWithParameters("DROP SERIES FROM $m WHERE $tag_name = $tag_value", db, "ms", client.Params{
+		"m":         client.Identifier(measurement),
+		"tag_name":  client.Identifier(selectTagName),
+		"tag_value": client.StringValue(selectTagValue),
+	})
+	response, err = c.Query(q)
 	if err != nil || response.Error() != nil {
 		return err
 	}
 
-	fmt.Println(response.Results)
-
-	return nil
+	// Insert new data points for the same measuremet / tag combination
+	return d.EmitDataPoints(db, measurement, dataPoints)
 }

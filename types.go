@@ -21,6 +21,18 @@ const (
 	DoubleShot
 )
 
+// ShotTypeFromString allows to generate a ShotType from a string
+func ShotTypeFromString(t string) ShotType {
+	switch t {
+	case "single":
+		return SingleShot
+	case "double":
+		return DoubleShot
+	default:
+		return UnknownShot
+	}
+}
+
 // String returns a string representation of the shot type
 func (t ShotType) String() string {
 	switch t {
