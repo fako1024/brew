@@ -1,4 +1,4 @@
-package brew
+package scanner
 
 var (
 	standardBrewSingle1JSON = `[

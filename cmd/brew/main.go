@@ -6,8 +6,8 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/fako1024/brew"
 	"github.com/fako1024/brew/influx"
+	"github.com/fako1024/brew/scanner"
 	"github.com/fako1024/btscale/pkg/felicita"
 	"github.com/sirupsen/logrus"
 )
@@ -49,9 +49,9 @@ func main() {
 		cfg.influxUser,
 		cfg.influxPassword,
 	)
-	scanner := brew.NewScanner(s, influxDB)
+	scan := scanner.New(s, influxDB)
 
-	if err := scanner.Run(); err != nil {
+	if err := scan.Run(); err != nil {
 		logrus.StandardLogger().Fatalf("Failed to scan for data: %s", err)
 	}
 }

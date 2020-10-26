@@ -1,9 +1,10 @@
-package brew
+package scanner
 
 import (
 	"math"
 	"time"
 
+	"github.com/fako1024/brew"
 	"github.com/fako1024/brew/buffer"
 	"github.com/fako1024/brew/influx"
 	"github.com/fako1024/btscale/pkg/scale"
@@ -12,12 +13,15 @@ import (
 )
 
 const (
-	defaultDataChanDepth     = 256
-	expectedSingleShotWeight = 30.
-	expectedDoubleShotWeight = 65.
+	defaultDataChanDepth = 256
 
 	minBrewTime = 10 * time.Second
 	maxBrewTime = 60 * time.Second
+)
+
+var (
+	expectedSingleShotWeight = 30.
+	expectedDoubleShotWeight = 65.
 )
 
 // Scanner denotes a brew scanner that constantly analyzes weight data from a scale
@@ -28,11 +32,11 @@ type Scanner struct {
 
 	dataChan    chan scale.DataPoint // The data channel to receive measurements on
 	dataBuf     *buffer.DataBuffer   // The ring buffer to keep the last n measurements
-	currentBrew *Brew                // The currently ongoing brew process
+	currentBrew *brew.Brew           // The currently ongoing brew process
 }
 
-// NewScanner initializes a new brew scanner instance
-func NewScanner(s scale.Scale, influxDB *influx.DB) *Scanner {
+// New initializes a new brew scanner instance
+func New(s scale.Scale, influxDB *influx.DB) *Scanner {
 	return &Scanner{
 		scale:    s,
 		influxDB: influxDB,
@@ -57,7 +61,7 @@ func (s *Scanner) Run() error {
 
 		if !currentlyTrackingBrew {
 			if lastNIncreasing(last5, 4) {
-				s.currentBrew = &Brew{
+				s.currentBrew = &brew.Brew{
 					ID:         uuid.New().String(),
 					Start:      last5[4].(scale.DataPoint).TimeStamp,
 					DataPoints: scale.DataPoints{last5[4].(scale.DataPoint), last5[3].(scale.DataPoint), last5[2].(scale.DataPoint), last5[1].(scale.DataPoint), last5[0].(scale.DataPoint)},
@@ -81,10 +85,10 @@ func (s *Scanner) Run() error {
 				}
 
 				if math.Abs(expectedSingleShotWeight-last5[0].Value()) < math.Abs(expectedDoubleShotWeight-last5[0].Value()) {
-					s.currentBrew.ShotType = SingleShot
+					s.currentBrew.ShotType = brew.SingleShot
 					s.scale.Buzz(1)
 				} else {
-					s.currentBrew.ShotType = DoubleShot
+					s.currentBrew.ShotType = brew.DoubleShot
 					s.scale.Buzz(2)
 				}
 
