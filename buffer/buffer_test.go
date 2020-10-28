@@ -72,7 +72,7 @@ func TestAddToAndRetrieveFromBuffer(t *testing.T) {
 						pos = buf.cap + pos
 					}
 					if lastN[l] != buf.data[pos] {
-						t.Fatalf("Unexpected nth (n = %d) data retrieved from buffer, want %v, have %v", k, buf.data[pos], lastN[l])
+						t.Fatalf("Unexpected lth out of k (l = %d, k = %d) data retrieved from buffer for (bufLen=%d, bufAdd=%d), want %v, have %v", l+1, k, bufLen, bufAdd, buf.data[pos], lastN[l])
 					}
 				}
 			}

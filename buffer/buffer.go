@@ -50,14 +50,12 @@ func (b *DataBuffer) LastN(n int) DataPoints {
 	}
 
 	res := make(DataPoints, n, n)
-
-	ptr := b.ptr - 1
-	for i := 0; i < n; i++ {
-		pos := ptr - i
-		if pos < 0 {
-			pos = b.cap + pos
-		}
-		res[n-i-1] = b.data[pos]
+	ptr := b.ptr - n
+	if ptr < 0 {
+		step := copy(res, b.data[b.cap+ptr:])
+		copy(res[step:], b.data)
+	} else {
+		copy(res, b.data[ptr:ptr+n])
 	}
 
 	return res
