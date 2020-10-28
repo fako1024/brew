@@ -57,7 +57,7 @@ func (b *DataBuffer) LastN(n int) DataPoints {
 		if pos < 0 {
 			pos = b.cap + pos
 		}
-		res[i] = b.data[pos]
+		res[n-i-1] = b.data[pos]
 	}
 
 	return res

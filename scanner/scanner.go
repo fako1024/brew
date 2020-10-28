@@ -63,16 +63,16 @@ func (s *Scanner) Run() error {
 			if lastNIncreasing(last5, 4) {
 				s.currentBrew = &brew.Brew{
 					ID:         uuid.New().String(),
-					Start:      last5[4].(scale.DataPoint).TimeStamp,
-					DataPoints: scale.DataPoints{last5[4].(scale.DataPoint), last5[3].(scale.DataPoint), last5[2].(scale.DataPoint), last5[1].(scale.DataPoint), last5[0].(scale.DataPoint)},
+					Start:      last5[0].(scale.DataPoint).TimeStamp,
+					DataPoints: scale.DataPoints{last5[0].(scale.DataPoint), last5[1].(scale.DataPoint), last5[2].(scale.DataPoint), last5[3].(scale.DataPoint), last5[4].(scale.DataPoint)},
 				}
 				logrus.StandardLogger().Infof("Starting tracking brew: %v", last5[0])
 				currentlyTrackingBrew = true
 			}
 		} else {
-			s.currentBrew.DataPoints = append(s.currentBrew.DataPoints, last5[0].(scale.DataPoint))
-			if last5[0].Value()-last5[1].Value() < 0.1 && last5[1].Value()-last5[2].Value() < 0.1 && last5[2].Value()-last5[3].Value() < 0.1 && last5[3].Value()-last5[4].Value() < 0.1 {
-				s.currentBrew.End = last5[0].(scale.DataPoint).TimeStamp
+			s.currentBrew.DataPoints = append(s.currentBrew.DataPoints, last5[4].(scale.DataPoint))
+			if last5[4].Value()-last5[3].Value() < 0.1 && last5[3].Value()-last5[2].Value() < 0.1 && last5[2].Value()-last5[1].Value() < 0.1 && last5[1].Value()-last5[0].Value() < 0.1 {
+				s.currentBrew.End = last5[4].(scale.DataPoint).TimeStamp
 
 				if s.currentBrew.End.Sub(s.currentBrew.Start) < minBrewTime {
 					logrus.StandardLogger().Errorf("Brew time too short, ignoring data points")
@@ -84,7 +84,7 @@ func (s *Scanner) Run() error {
 					continue
 				}
 
-				if math.Abs(expectedSingleShotWeight-last5[0].Value()) < math.Abs(expectedDoubleShotWeight-last5[0].Value()) {
+				if math.Abs(expectedSingleShotWeight-last5[4].Value()) < math.Abs(expectedDoubleShotWeight-last5[4].Value()) {
 					s.currentBrew.ShotType = brew.SingleShot
 					s.scale.Buzz(1)
 				} else {
@@ -169,7 +169,7 @@ func lastNIncreasing(data buffer.DataPoints, n int) bool {
 		}
 
 		// Check if data has increased from step i to i+1
-		if data[i].Value() <= data[i+1].Value() {
+		if data[i+1].Value() <= data[i].Value() {
 			return false
 		}
 	}

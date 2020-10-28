@@ -108,7 +108,7 @@ func TestScanDataPointsTable(t *testing.T) {
 
 			for i := 0; i < 3; i++ {
 				time.Sleep(100 * time.Millisecond)
-				if len(scanner.currentBrew.DataPoints) != test.nExpectedDataPoints {
+				if scanner.currentBrew == nil || len(scanner.currentBrew.DataPoints) != test.nExpectedDataPoints {
 					continue
 				}
 
@@ -121,6 +121,10 @@ func TestScanDataPointsTable(t *testing.T) {
 				}
 
 				return
+			}
+
+			if scanner.currentBrew == nil {
+				t.Fatalf("No brew was detected")
 			}
 
 			t.Fatalf("Unexpected brew data points detected: %d", len(scanner.currentBrew.DataPoints))

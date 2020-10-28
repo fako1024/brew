@@ -5,9 +5,8 @@ import (
 )
 
 const (
-	maxBufLen   = 129
-	maxBufAdd   = 1025
-	maxBufLastN = 16
+	maxBufLen = 80
+	maxBufAdd = 245
 )
 
 type simpleDataPoint struct {
@@ -49,7 +48,7 @@ func TestAddToAndRetrieveFromBuffer(t *testing.T) {
 	for bufLen := 1; bufLen < maxBufLen; bufLen++ {
 		buf := NewDataBuffer(bufLen)
 
-		for bufAdd := 1; bufAdd <= bufLen; bufAdd++ {
+		for bufAdd := 1; bufAdd <= maxBufAdd; bufAdd++ {
 			buf.Append(simpleDataPoint{data: float64(bufAdd)})
 
 			if buf.Last().Value() != float64(bufAdd) {
@@ -60,20 +59,20 @@ func TestAddToAndRetrieveFromBuffer(t *testing.T) {
 				t.Fatalf("Unexpected asserted value after adding element to buffer, want %d, have %.2f", bufAdd, buf.Last().Value())
 			}
 
-			for k := 1; k <= bufAdd; k++ {
+			for k := 1; k <= bufLen; k++ {
 				lastN := buf.LastN(k)
 
 				if len(lastN) != k {
 					t.Fatalf("Unexpected length of buffer extraction, want %d, have %d", k, len(lastN))
 				}
 
-				for l := 1; l < k; l++ {
-					pos := buf.ptr - 1 - l
+				for l := 0; l < k; l++ {
+					pos := buf.ptr - k + l
 					if pos < 0 {
 						pos = buf.cap + pos
 					}
 					if lastN[l] != buf.data[pos] {
-						t.Fatalf("Unexpected nth data retrieved from buffer, want %v, have %v", buf.data[pos], lastN[l])
+						t.Fatalf("Unexpected nth (n = %d) data retrieved from buffer, want %v, have %v", k, buf.data[pos], lastN[l])
 					}
 				}
 			}
