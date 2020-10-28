@@ -5,18 +5,9 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/fako1024/brew/db"
 	client "github.com/influxdata/influxdb1-client/v2"
 )
-
-// DataPoint denotes a data point with specific timings
-type DataPoint struct {
-	TimeStamp time.Time
-	Data      map[string]interface{}
-	Tags      map[string]string
-}
-
-// DataPoints denotes a list of data points
-type DataPoints []DataPoint
 
 // DB is an InfluxDB interface, providing functionality to interact with the database
 type DB struct {
@@ -35,50 +26,50 @@ func New(addr, username, password string) *DB {
 }
 
 // EmitDataPoints creates data points and stores it in the underlying Influx database
-func (d *DB) EmitDataPoints(db, measurement string, data DataPoints) error {
+func (d *DB) EmitDataPoints(dbName, measurement string, data db.DataPoints) error {
 
 	// Create a new InfluxDB client
 	c, err := client.NewHTTPClient(*d.config)
 	if err != nil {
-		return fmt.Errorf("Error creating InfluxDB Client for measurement %s on DB %s: %s", measurement, db, err)
+		return fmt.Errorf("Error creating InfluxDB Client for measurement %s on DB %s: %s", measurement, dbName, err)
 	}
 	defer c.Close()
 
 	// Create a new point batch
 	bp, _ := client.NewBatchPoints(client.BatchPointsConfig{
-		Database:  db,
+		Database:  dbName,
 		Precision: "ms",
 	})
 
 	for _, v := range data {
 		pt, err := client.NewPoint(measurement, v.Tags, v.Data, v.TimeStamp)
 		if err != nil {
-			return fmt.Errorf("Error creating InfluxDB Point for measurement %s on DB %s: %s", measurement, db, err)
+			return fmt.Errorf("Error creating InfluxDB Point for measurement %s on DB %s: %s", measurement, dbName, err)
 		}
 		bp.AddPoint(pt)
 	}
 
 	// Write the batch
 	if err = c.Write(bp); err != nil {
-		return fmt.Errorf("Error writing InfluxDB Batch for measurement %s on DB %s: %s", measurement, db, err)
+		return fmt.Errorf("Error writing InfluxDB Batch for measurement %s on DB %s: %s", measurement, dbName, err)
 	}
 
 	return nil
 }
 
 // ModifyMeasurement allows to alter certain elements of a measurement
-func (d *DB) ModifyMeasurement(db, measurement, selectTagName, selectTagValue, replaceTagName, replaceTagValue string) error {
+func (d *DB) ModifyMeasurement(dbName, measurement, selectTagName, selectTagValue, replaceTagName, replaceTagValue string) error {
 
 	// Create a new InfluxDB client
 	c, err := client.NewHTTPClient(*d.config)
 	if err != nil {
-		return fmt.Errorf("Error creating InfluxDB Client for measurement %s on DB %s: %s", measurement, db, err)
+		return fmt.Errorf("Error creating InfluxDB Client for measurement %s on DB %s: %s", measurement, dbName, err)
 	}
 	defer c.Close()
 
 	// Get the column types
-	q := client.NewQueryWithParameters("SHOW FIELD KEYS ON $d FROM $m", db, "ms", client.Params{
-		"d": client.Identifier(db),
+	q := client.NewQueryWithParameters("SHOW FIELD KEYS ON $d FROM $m", dbName, "ms", client.Params{
+		"d": client.Identifier(dbName),
 		"m": client.Identifier(measurement),
 	})
 	response, err := c.Query(q)
@@ -95,7 +86,7 @@ func (d *DB) ModifyMeasurement(db, measurement, selectTagName, selectTagValue, r
 	}
 
 	// Get the requested measuremet values
-	q = client.NewQueryWithParameters("SELECT * FROM $m WHERE $tag_name = $tag_value", db, "ms", client.Params{
+	q = client.NewQueryWithParameters("SELECT * FROM $m WHERE $tag_name = $tag_value", dbName, "ms", client.Params{
 		"m":         client.Identifier(measurement),
 		"tag_name":  client.Identifier(selectTagName),
 		"tag_value": client.StringValue(selectTagValue),
@@ -115,7 +106,7 @@ func (d *DB) ModifyMeasurement(db, measurement, selectTagName, selectTagValue, r
 	}
 
 	// Process existing data points
-	var dataPoints DataPoints
+	var dataPoints db.DataPoints
 	for _, result := range response.Results {
 		for _, ser := range result.Series {
 
@@ -167,7 +158,7 @@ func (d *DB) ModifyMeasurement(db, measurement, selectTagName, selectTagValue, r
 				}
 
 				// Append the new data point
-				dataPoints = append(dataPoints, DataPoint{
+				dataPoints = append(dataPoints, db.DataPoint{
 					TimeStamp: ts,
 					Data:      data,
 					Tags:      tags,
@@ -182,7 +173,7 @@ func (d *DB) ModifyMeasurement(db, measurement, selectTagName, selectTagValue, r
 	}
 
 	//Drop existing measurement with the provided tag from the DB
-	q = client.NewQueryWithParameters("DROP SERIES FROM $m WHERE $tag_name = $tag_value", db, "ms", client.Params{
+	q = client.NewQueryWithParameters("DROP SERIES FROM $m WHERE $tag_name = $tag_value", dbName, "ms", client.Params{
 		"m":         client.Identifier(measurement),
 		"tag_name":  client.Identifier(selectTagName),
 		"tag_value": client.StringValue(selectTagValue),
@@ -193,5 +184,5 @@ func (d *DB) ModifyMeasurement(db, measurement, selectTagName, selectTagValue, r
 	}
 
 	// Insert new data points for the same measuremet / tag combination
-	return d.EmitDataPoints(db, measurement, dataPoints)
+	return d.EmitDataPoints(dbName, measurement, dataPoints)
 }

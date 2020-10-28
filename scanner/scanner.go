@@ -6,7 +6,8 @@ import (
 
 	"github.com/fako1024/brew"
 	"github.com/fako1024/brew/buffer"
-	"github.com/fako1024/brew/influx"
+	"github.com/fako1024/brew/db"
+	"github.com/fako1024/brew/db/influx"
 	"github.com/fako1024/btscale/pkg/scale"
 	"github.com/google/uuid"
 	"github.com/sirupsen/logrus"
@@ -28,7 +29,7 @@ var (
 // and automatically creates / tracks brews
 type Scanner struct {
 	scale    scale.Scale // The scale to use for measurement
-	influxDB *influx.DB  // The InfluxDb endpoint for data submission
+	influxDB db.DB       // The database endpoint for data submission
 
 	dataChan    chan scale.DataPoint // The data channel to receive measurements on
 	dataBuf     *buffer.DataBuffer   // The ring buffer to keep the last n measurements
@@ -103,9 +104,9 @@ func (s *Scanner) Run() error {
 					}
 
 					// Generate data points from brew data
-					var dataPoints influx.DataPoints
+					var dataPoints db.DataPoints
 					for _, v := range s.currentBrew.DataPoints {
-						dataPoints = append(dataPoints, influx.DataPoint{
+						dataPoints = append(dataPoints, db.DataPoint{
 							TimeStamp: v.TimeStamp,
 							Tags:      tags,
 							Data: map[string]interface{}{
@@ -116,7 +117,7 @@ func (s *Scanner) Run() error {
 					}
 
 					// Emit the summary to the influxDB
-					if err := s.influxDB.EmitDataPoints("brews", "summary", influx.DataPoints{
+					if err := s.influxDB.EmitDataPoints("brews", "summary", db.DataPoints{
 						{
 							TimeStamp: s.currentBrew.Start,
 							Tags:      tags,

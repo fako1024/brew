@@ -6,7 +6,7 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/fako1024/brew/influx"
+	"github.com/fako1024/brew/db/influx"
 	"github.com/fako1024/brew/scanner"
 	"github.com/fako1024/btscale/pkg/felicita"
 	"github.com/sirupsen/logrus"

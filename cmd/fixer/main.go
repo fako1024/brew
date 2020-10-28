@@ -4,7 +4,7 @@ import (
 	"flag"
 
 	"github.com/fako1024/brew"
-	"github.com/fako1024/brew/influx"
+	"github.com/fako1024/brew/db/influx"
 	"github.com/sirupsen/logrus"
 )
 
