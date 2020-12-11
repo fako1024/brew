@@ -71,9 +71,6 @@ func TestLastNIncreasing(t *testing.T) {
 
 func TestScanDataPointsTable(t *testing.T) {
 
-	expectedSingleShotWeight = 45.
-	expectedDoubleShotWeight = 90.
-
 	testTable := []struct {
 		name                string
 		data                string
@@ -94,7 +91,7 @@ func TestScanDataPointsTable(t *testing.T) {
 				t.Fatalf("Failed to initialize mock scale: %s", err)
 			}
 
-			scanner := New(s, nil)
+			scanner := New(s, nil, WithSingleBrewShotWeight(45.), WithDoubleBrewShotWeight(90.))
 			go scanner.Run()
 
 			var dataPoints scale.DataPoints

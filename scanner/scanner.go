@@ -18,11 +18,9 @@ const (
 
 	minBrewTime = 10 * time.Second
 	maxBrewTime = 60 * time.Second
-)
 
-var (
-	expectedSingleShotWeight = 30.
-	expectedDoubleShotWeight = 65.
+	defaultExpectedSingleShotWeight = 30.
+	defaultExpectedDoubleShotWeight = 65.
 )
 
 // Scanner denotes a brew scanner that constantly analyzes weight data from a scale
@@ -34,16 +32,29 @@ type Scanner struct {
 	dataChan    chan scale.DataPoint // The data channel to receive measurements on
 	dataBuf     *buffer.DataBuffer   // The ring buffer to keep the last n measurements
 	currentBrew *brew.Brew           // The currently ongoing brew process
+
+	expectedSingleShotWeight float64
+	expectedDoubleShotWeight float64
 }
 
 // New initializes a new brew scanner instance
-func New(s scale.Scale, influxDB *influx.DB) *Scanner {
-	return &Scanner{
+func New(s scale.Scale, influxDB *influx.DB, options ...func(*Scanner)) *Scanner {
+	scanner := &Scanner{
 		scale:    s,
 		influxDB: influxDB,
 		dataBuf:  buffer.NewDataBuffer(1024),
 		dataChan: make(chan scale.DataPoint, defaultDataChanDepth),
+
+		expectedSingleShotWeight: defaultExpectedSingleShotWeight,
+		expectedDoubleShotWeight: defaultExpectedDoubleShotWeight,
 	}
+
+	// Execute functional options, if any
+	for _, opt := range options {
+		opt(scanner)
+	}
+
+	return scanner
 }
 
 // Run starts to continuously scan for data and process it (blocking method)
@@ -85,7 +96,7 @@ func (s *Scanner) Run() error {
 					continue
 				}
 
-				if math.Abs(expectedSingleShotWeight-last5[4].Value()) < math.Abs(expectedDoubleShotWeight-last5[4].Value()) {
+				if math.Abs(s.expectedSingleShotWeight-last5[4].Value()) < math.Abs(s.expectedDoubleShotWeight-last5[4].Value()) {
 					s.currentBrew.ShotType = brew.SingleShot
 					s.scale.Buzz(1)
 				} else {
