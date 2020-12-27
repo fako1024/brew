@@ -50,6 +50,6 @@ type Brew struct {
 	ID         string           // ID of brew
 	Start      time.Time        // Start of the brewing process
 	End        time.Time        // End of the brewing process
-	ShotType   ShotType         // Type of brew (single / double / unknown)
 	DataPoints scale.DataPoints // Data points collected as part of the brewing process
+	ShotType   ShotType         // Type of brew (single / double / unknown)
 }
