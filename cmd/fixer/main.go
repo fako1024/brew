@@ -81,9 +81,15 @@ func main() {
 
 	if cfg.maintenanceType != "" {
 
+		// Attempt to parse the maintenance timestamp
 		var err error
 		if cfg.maintenanceTS, err = time.Parse(timestampLayout, timestampStr); err != nil {
 			logrus.StandardLogger().Fatalf("Failed to parse time stamp for maintenance task: %s", err)
+		}
+
+		// Check if the maintenance type is supported
+		if !maintenance.IsValidType(cfg.maintenanceType) {
+			logrus.StandardLogger().Fatalf("Invalid maintenance type: %s (supported: %v)", cfg.maintenanceType, maintenance.AllTypes)
 		}
 
 		if err := influxDB.EmitDataPoints("brews", "maintenance", db.DataPoints{

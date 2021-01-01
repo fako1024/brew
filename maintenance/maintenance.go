@@ -17,3 +17,17 @@ const (
 	// including replacement of the respective seals
 	DescaleFull = "descale_full"
 )
+
+// AllTypes provides a lookup table for all existing types
+var AllTypes = map[Type]struct{}{
+	BackFlush:        {},
+	DescaleBrewGroup: {},
+	DescaleFull:      {},
+}
+
+// IsValidType checks and returns if a type is valid
+func IsValidType(t Type) bool {
+	_, exists := AllTypes[t]
+
+	return exists
+}
