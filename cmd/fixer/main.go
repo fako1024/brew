@@ -6,9 +6,9 @@ import (
 	"time"
 
 	"github.com/fako1024/brew"
+	"github.com/fako1024/brew/action"
 	"github.com/fako1024/brew/db"
 	"github.com/fako1024/brew/db/influx"
-	"github.com/fako1024/brew/maintenance"
 	"github.com/sirupsen/logrus"
 )
 
@@ -18,8 +18,8 @@ type config struct {
 	id       string
 	shotType brew.ShotType
 
-	maintenanceTS   time.Time
-	maintenanceType maintenance.Type
+	actionTS   time.Time
+	actionType action.Type
 
 	influxEndpoint string
 	influxUser     string
@@ -43,9 +43,9 @@ func main() {
 	flag.StringVar(&cfg.id, "id", "", "Brew ID to perform change on")
 	flag.StringVar(&shotTypeStr, "shotType", "", "Shot type to set")
 
-	// Flags to perform / set maintenance parameters
-	flag.StringVar(&timestampStr, "maintenance-time", time.Now().Format(timestampLayout), "Timestamp at which a maintenance was performed")
-	flag.StringVar(&cfg.maintenanceType, "maintenance-type", "", "Type of performed maintenance")
+	// Flags to perform / set action (e.g. maintenance) parameters
+	flag.StringVar(&timestampStr, "action-time", time.Now().Format(timestampLayout), "Timestamp at which an action was performed")
+	flag.StringVar(&cfg.actionType, "action-type", "", "Type of performed action")
 
 	flag.Parse()
 	if cfg.influxEndpoint == "" {
@@ -79,27 +79,34 @@ func main() {
 		}
 	}
 
-	if cfg.maintenanceType != "" {
+	if cfg.actionType != "" {
 
-		// Attempt to parse the maintenance timestamp
+		// Attempt to parse the action timestamp
 		var err error
-		if cfg.maintenanceTS, err = time.Parse(timestampLayout, timestampStr); err != nil {
-			logrus.StandardLogger().Fatalf("Failed to parse time stamp for maintenance task: %s", err)
+		if cfg.actionTS, err = time.Parse(timestampLayout, timestampStr); err != nil {
+			logrus.StandardLogger().Fatalf("Failed to parse time stamp for action: %s", err)
 		}
 
-		// Check if the maintenance type is supported
-		if !maintenance.IsValidType(cfg.maintenanceType) {
-			logrus.StandardLogger().Fatalf("Invalid maintenance type: %s (supported: %v)", cfg.maintenanceType, maintenance.AllTypes)
+		// Check if the ation type is supported
+		actionCategory, isValid := action.Categorize(cfg.actionType)
+		if !isValid {
+			logrus.StandardLogger().Fatalf("Invalid action type: %s (supported: %v)", cfg.actionType, action.Categories())
 		}
 
-		if err := influxDB.EmitDataPoints("brews", "maintenance", db.DataPoints{
+		if err := influxDB.EmitDataPoints("brews", "actions", db.DataPoints{
 			{
-				TimeStamp: cfg.maintenanceTS,
-				Data:      map[string]interface{}{"type": strings.Title(strings.Replace(cfg.maintenanceType, "_", " ", -1))},
-				Tags:      map[string]string{"maintenance_type": cfg.maintenanceType},
+				TimeStamp: cfg.actionTS,
+				Data: map[string]interface{}{
+					"type":     strings.Title(strings.Replace(cfg.actionType, "_", " ", -1)),
+					"category": strings.Title(strings.Replace(actionCategory, "_", " ", -1)),
+				},
+				Tags: map[string]string{
+					"action_type":     cfg.actionType,
+					"action_category": actionCategory,
+				},
 			},
 		}); err != nil {
-			logrus.StandardLogger().Fatalf("Failed to add maintenance task: %s", err)
+			logrus.StandardLogger().Fatalf("Failed to add action: %s", err)
 		}
 	}
 }
