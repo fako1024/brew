@@ -3,6 +3,7 @@ package influx
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/fako1024/brew/db"
@@ -57,6 +58,52 @@ func (d *DB) EmitDataPoints(dbName, measurement string, data db.DataPoints) erro
 	return nil
 }
 
+// FetchMeasurementsTable retrieves a measurement
+func (d *DB) FetchMeasurementsTable(dbName, measurement string, field ...string) ([][]string, error) {
+
+	// Create a new InfluxDB client
+	c, err := client.NewHTTPClient(*d.config)
+	if err != nil {
+		return nil, fmt.Errorf("Error creating InfluxDB Client for measurement %s on DB %s: %s", measurement, dbName, err)
+	}
+	defer c.Close()
+
+	for i := 0; i < len(field); i++ {
+		field[i] = "\"" + field[i] + "\""
+	}
+
+	// Get the requested measuremet values
+	q := client.NewQueryWithParameters(fmt.Sprintf("SELECT %s FROM $m", strings.Join(field, ",")), dbName, "ns", client.Params{
+		"m": client.Identifier(measurement),
+	})
+	response, err := c.Query(q)
+	if err != nil || response.Error() != nil {
+		return nil, fmt.Errorf("Failed to query measurement: %s, %s", err, response.Error())
+	}
+
+	var entries [][]string
+
+	for _, result := range response.Results {
+		for _, ser := range result.Series {
+			for _, row := range ser.Values {
+				var rowFields []string
+				for _, column := range row {
+					if colStr, ok := column.(string); ok {
+						rowFields = append(rowFields, colStr)
+					} else if colStringer, ok := column.(fmt.Stringer); ok {
+						rowFields = append(rowFields, colStringer.String())
+					} else {
+						return nil, fmt.Errorf("Failed to parse column value: %s", column)
+					}
+				}
+				entries = append(entries, rowFields)
+			}
+		}
+	}
+
+	return entries, nil
+}
+
 // ModifyMeasurement allows to alter certain elements of a measurement
 func (d *DB) ModifyMeasurement(dbName, measurement, selectTagName, selectTagValue, replaceTagName, replaceTagValue string) error {
 
@@ -85,7 +132,7 @@ func (d *DB) ModifyMeasurement(dbName, measurement, selectTagName, selectTagValu
 		}
 	}
 
-	// Get the requested measuremet values
+	// Get the requested measurement values
 	q = client.NewQueryWithParameters("SELECT * FROM $m WHERE $tag_name = $tag_value", dbName, "ms", client.Params{
 		"m":         client.Identifier(measurement),
 		"tag_name":  client.Identifier(selectTagName),
