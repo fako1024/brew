@@ -1,4 +1,5 @@
 cmd/brew/brew
 cmd/fixer/fixer
+cmd/import/import
 scanner/scanner.test
 buffer/buffer.test
