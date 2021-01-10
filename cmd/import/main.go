@@ -52,6 +52,7 @@ func main() {
 	if err != nil {
 		logrus.StandardLogger().Fatalf("Failed to open CSV file: %s", err)
 	}
+	defer csvData.Close()
 
 	// Parse the file
 	r := csv.NewReader(csvData)
