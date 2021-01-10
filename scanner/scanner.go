@@ -21,6 +21,14 @@ const (
 
 	defaultExpectedSingleShotWeight = 30.
 	defaultExpectedDoubleShotWeight = 65.
+
+	defaultSingleShotBeansWeight = 8.75
+	defaultDoubleShotBeansWeight = 16.0
+
+	// Relative grinder setting
+	// 0.0: Fine
+	// 1.0: Coarse
+	defaultGrindSetting = 0.208695652 // Mahlkönig Vario V2: (23*2 + 2) / 230
 )
 
 // Scanner denotes a brew scanner that constantly analyzes weight data from a scale
@@ -35,6 +43,9 @@ type Scanner struct {
 
 	expectedSingleShotWeight float64
 	expectedDoubleShotWeight float64
+	singleShotBeansWeight    float64
+	doubleShotBeansWeight    float64
+	grindSetting             float64
 }
 
 // New initializes a new brew scanner instance
@@ -47,6 +58,10 @@ func New(s scale.Scale, influxDB *influx.DB, options ...func(*Scanner)) *Scanner
 
 		expectedSingleShotWeight: defaultExpectedSingleShotWeight,
 		expectedDoubleShotWeight: defaultExpectedDoubleShotWeight,
+
+		singleShotBeansWeight: defaultSingleShotBeansWeight,
+		doubleShotBeansWeight: defaultDoubleShotBeansWeight,
+		grindSetting:          defaultGrindSetting,
 	}
 
 	// Execute functional options, if any
@@ -127,6 +142,13 @@ func (s *Scanner) Run() error {
 						})
 					}
 
+					// Define the weight of the beans / grounds used for the
+					// single  or double shot, respectively
+					beansWeight := s.doubleShotBeansWeight
+					if s.currentBrew.ShotType == brew.SingleShot {
+						beansWeight = s.singleShotBeansWeight
+					}
+
 					// Emit the summary to the influxDB
 					if err := s.influxDB.EmitDataPoints("brews", "summary", db.DataPoints{
 						{
@@ -138,6 +160,8 @@ func (s *Scanner) Run() error {
 								"end_weight":    s.currentBrew.DataPoints[len(s.currentBrew.DataPoints)-1].Weight,
 								"unit":          s.currentBrew.DataPoints[len(s.currentBrew.DataPoints)-1].Unit,
 								"battery_level": s.scale.BatteryLevel(),
+								"beans_weight":  beansWeight,
+								"grind_setting": s.grindSetting,
 							},
 						},
 					}); err != nil {
