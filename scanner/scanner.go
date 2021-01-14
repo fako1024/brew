@@ -22,13 +22,18 @@ const (
 	defaultExpectedSingleShotWeight = 30.
 	defaultExpectedDoubleShotWeight = 65.
 
-	defaultSingleShotBeansWeight = 8.75
-	defaultDoubleShotBeansWeight = 16.0
+	// DefaultSingleShotBeansWeight denotes the default weight of beans
+	// / grounds used for a single shot
+	DefaultSingleShotBeansWeight = 8.75
 
-	// Relative grinder setting
+	// DefaultDoubleShotBeansWeight denotes the default weight of beans
+	// / grounds used for a double shot
+	DefaultDoubleShotBeansWeight = 16.0
+
+	// DefaultGrindSetting denotes the relative grinder setting
 	// 0.0: Fine
 	// 1.0: Coarse
-	defaultGrindSetting = 0.208695652 // Mahlkönig Vario V2: (23*2 + 2) / 230
+	DefaultGrindSetting = 0.208695652 // Mahlkönig Vario V2: (23*2 + 2) / 230
 )
 
 // Scanner denotes a brew scanner that constantly analyzes weight data from a scale
@@ -59,9 +64,9 @@ func New(s scale.Scale, influxDB *influx.DB, options ...func(*Scanner)) *Scanner
 		expectedSingleShotWeight: defaultExpectedSingleShotWeight,
 		expectedDoubleShotWeight: defaultExpectedDoubleShotWeight,
 
-		singleShotBeansWeight: defaultSingleShotBeansWeight,
-		doubleShotBeansWeight: defaultDoubleShotBeansWeight,
-		grindSetting:          defaultGrindSetting,
+		singleShotBeansWeight: DefaultSingleShotBeansWeight,
+		doubleShotBeansWeight: DefaultDoubleShotBeansWeight,
+		grindSetting:          DefaultGrindSetting,
 	}
 
 	// Execute functional options, if any

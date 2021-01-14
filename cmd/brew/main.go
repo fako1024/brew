@@ -16,6 +16,10 @@ type config struct {
 	influxEndpoint string
 	influxUser     string
 	influxPassword string
+
+	beansWeightSingle float64
+	beansWeightDouble float64
+	grindSetting      float64
 }
 
 func main() {
@@ -24,6 +28,11 @@ func main() {
 	flag.StringVar(&cfg.influxEndpoint, "influxEndpoint", "", "Endpoint for InfluxDB emissions")
 	flag.StringVar(&cfg.influxUser, "influxUser", "root", "User for InfluxDB emissions")
 	flag.StringVar(&cfg.influxPassword, "influxPassword", "root", "Password for InfluxDB emissions")
+
+	flag.Float64Var(&cfg.beansWeightSingle, "beansWeightSingle", scanner.DefaultSingleShotBeansWeight, "Weight of beans / grounds used for a single shot")
+	flag.Float64Var(&cfg.beansWeightDouble, "beansWeightDouble", scanner.DefaultDoubleShotBeansWeight, "Weight of beans / grounds used for a double shot")
+	flag.Float64Var(&cfg.grindSetting, "grindSetting", scanner.DefaultGrindSetting, "Relative grinder setting (0.0: Fine -> 1.0: Coarse)")
+
 	flag.Parse()
 	if cfg.influxEndpoint == "" {
 		logrus.StandardLogger().Fatalf("No InfluxDB endpoint specified")
@@ -49,7 +58,11 @@ func main() {
 		cfg.influxUser,
 		cfg.influxPassword,
 	)
-	scan := scanner.New(s, influxDB)
+	scan := scanner.New(s, influxDB,
+		scanner.WithSingleShotBeansWeight(cfg.beansWeightSingle),
+		scanner.WithDoubleShotBeansWeight(cfg.beansWeightDouble),
+		scanner.WithGrindSetting(cfg.grindSetting),
+	)
 
 	if err := scan.Run(); err != nil {
 		logrus.StandardLogger().Fatalf("Failed to scan for data: %s", err)
