@@ -91,7 +91,7 @@ func TestScanDataPointsTable(t *testing.T) {
 				t.Fatalf("Failed to initialize mock scale: %s", err)
 			}
 
-			scanner := New(s, nil, WithSingleBrewShotWeight(45.), WithDoubleBrewShotWeight(90.))
+			scanner := New(s, nil, WithExpectedSingleBrewShotWeight(45.), WithExpectedDoubleBrewShotWeight(90.))
 			go scanner.Run()
 
 			var dataPoints scale.DataPoints
