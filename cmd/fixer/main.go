@@ -15,9 +15,10 @@ import (
 const timestampLayout = "2006-01-02T15:04:05"
 
 type config struct {
-	id          string
-	shotType    brew.ShotType
-	beansWeight float64
+	id           string
+	shotType     brew.ShotType
+	beansWeight  float64
+	grindSetting float64
 
 	actionTS   time.Time
 	actionType action.Type
@@ -44,6 +45,7 @@ func main() {
 	flag.StringVar(&cfg.id, "id", "", "Brew ID to perform change on")
 	flag.StringVar(&shotTypeStr, "shotType", "", "Shot type to set")
 	flag.Float64Var(&cfg.beansWeight, "beansWeight", 0., "Beans weight to set")
+	flag.Float64Var(&cfg.grindSetting, "grindSetting", 0., "Grind setting to set")
 
 	// Flags to perform / set action (e.g. maintenance) parameters
 	flag.StringVar(&timestampStr, "action-time", time.Now().Format(timestampLayout), "Timestamp at which an action was performed")
@@ -72,10 +74,13 @@ func main() {
 
 		if cfg.shotType != brew.UnknownShot {
 
-			// Check if the beans weight has been overridden
+			// Check if any other fields have been overridden
 			additionalFields := make(map[string]interface{})
 			if cfg.beansWeight > 0. {
 				additionalFields["beans_weight"] = cfg.beansWeight
+			}
+			if cfg.grindSetting > 0. {
+				additionalFields["grind_setting"] = cfg.grindSetting
 			}
 
 			if err := influxDB.ModifyMeasurement("brews", "brew", "id", cfg.id, "shot_type", cfg.shotType.String(), additionalFields); err != nil {
