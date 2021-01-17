@@ -105,7 +105,7 @@ func (d *DB) FetchMeasurementsTable(dbName, measurement string, field ...string)
 }
 
 // ModifyMeasurement allows to alter certain elements of a measurement
-func (d *DB) ModifyMeasurement(dbName, measurement, selectTagName, selectTagValue, replaceTagName, replaceTagValue string) error {
+func (d *DB) ModifyMeasurement(dbName, measurement, selectTagName, selectTagValue, replaceTagName, replaceTagValue string, additionalData map[string]interface{}) error {
 
 	// Create a new InfluxDB client
 	c, err := client.NewHTTPClient(*d.config)
@@ -181,6 +181,12 @@ func (d *DB) ModifyMeasurement(dbName, measurement, selectTagName, selectTagValu
 						ts = time.Unix(0, tsParse*int64(time.Millisecond))
 						data[col] = ts
 					} else {
+
+						// Check if an additional field override was provided
+						if override, exists := additionalData[col]; exists {
+							data[col] = override
+							continue
+						}
 
 						// Check the column type and perform parsing
 						switch columnTypes[col] {

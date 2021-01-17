@@ -15,8 +15,9 @@ import (
 const timestampLayout = "2006-01-02T15:04:05"
 
 type config struct {
-	id       string
-	shotType brew.ShotType
+	id          string
+	shotType    brew.ShotType
+	beansWeight float64
 
 	actionTS   time.Time
 	actionType action.Type
@@ -42,6 +43,7 @@ func main() {
 	// Flags to perform changes to existing brews
 	flag.StringVar(&cfg.id, "id", "", "Brew ID to perform change on")
 	flag.StringVar(&shotTypeStr, "shotType", "", "Shot type to set")
+	flag.Float64Var(&cfg.beansWeight, "beansWeight", 0., "Beans weight to set")
 
 	// Flags to perform / set action (e.g. maintenance) parameters
 	flag.StringVar(&timestampStr, "action-time", time.Now().Format(timestampLayout), "Timestamp at which an action was performed")
@@ -69,10 +71,17 @@ func main() {
 		}
 
 		if cfg.shotType != brew.UnknownShot {
-			if err := influxDB.ModifyMeasurement("brews", "brew", "id", cfg.id, "shot_type", cfg.shotType.String()); err != nil {
+
+			// Check if the beans weight has been overridden
+			additionalFields := make(map[string]interface{})
+			if cfg.beansWeight > 0. {
+				additionalFields["beans_weight"] = cfg.beansWeight
+			}
+
+			if err := influxDB.ModifyMeasurement("brews", "brew", "id", cfg.id, "shot_type", cfg.shotType.String(), additionalFields); err != nil {
 				logrus.StandardLogger().Fatalf("Failed to alter measurement: %s", err)
 			}
-			if err := influxDB.ModifyMeasurement("brews", "summary", "id", cfg.id, "shot_type", cfg.shotType.String()); err != nil {
+			if err := influxDB.ModifyMeasurement("brews", "summary", "id", cfg.id, "shot_type", cfg.shotType.String(), additionalFields); err != nil {
 				logrus.StandardLogger().Fatalf("Failed to alter measurement summary: %s", err)
 			}
 			logrus.StandardLogger().Infof("Successfully changed shot type for ID %s to %s", cfg.id, cfg.shotType)
