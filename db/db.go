@@ -21,5 +21,5 @@ type DB interface {
 	EmitDataPoints(db, measurement string, data DataPoints) error
 
 	// ModifyMeasurement allows to alter certain elements of a measurement
-	ModifyMeasurement(db, measurement, selectTagName, selectTagValue, replaceTagName, replaceTagValue string) error
+	ModifyMeasurement(db, measurement, selectTagName, selectTagValue, replaceTagName, replaceTagValue string, additionalData map[string]interface{}) error
 }
