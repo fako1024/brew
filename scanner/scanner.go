@@ -33,7 +33,7 @@ const (
 	// DefaultGrindSetting denotes the relative grinder setting
 	// 0.0: Fine
 	// 1.0: Coarse
-	DefaultGrindSetting = 0.208695652 // Mahlkönig Vario V2: (23*2 + 2) / 230
+	DefaultGrindSetting = 0.208695652 // Mahlkönig Vario V2: (23*2 + 2) / 230 (3B setting)
 )
 
 // Scanner denotes a brew scanner that constantly analyzes weight data from a scale

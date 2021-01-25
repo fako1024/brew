@@ -1,8 +1,8 @@
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c=
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
-github.com/fako1024/btscale v0.0.0-20201120114859-5dce174e36fc h1:OdpS7saSM3lnXvq1zMelvugkIEeiAnU7nghqUNRJLm8=
-github.com/fako1024/btscale v0.0.0-20201120114859-5dce174e36fc/go.mod h1:Y2DpeWs6p4d6lsB0ZWUFagPz2SSj8oiBMNDhOpa1VQ4=
+github.com/fako1024/btscale v0.0.0-20210126121211-5d07cb24b897 h1:tG99935h4hjTTuZDW/aaEdnONRCFrLogGifLgQkYPTI=
+github.com/fako1024/btscale v0.0.0-20210126121211-5d07cb24b897/go.mod h1:Y2DpeWs6p4d6lsB0ZWUFagPz2SSj8oiBMNDhOpa1VQ4=
 github.com/fako1024/gatt v1.0.0 h1:5MExarx/d6I8w1CO4RB8/24ZgDn1Dtgpolaeiiy9cE0=
 github.com/fako1024/gatt v1.0.0/go.mod h1:Al+UbRXQEPmUtW5e2i5QvegN2BMKEQBKMgzf+6gHj6Y=
 github.com/fatih/stopwatch v1.0.0 h1:sTac5Q8e+Ql27wjVze0rOHWVQqkKmhSlPmQbNlAsZz0=
