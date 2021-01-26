@@ -16,3 +16,11 @@ func TestValidTypes(t *testing.T) {
 		t.Fatalf("Unexpected valid empty type detected")
 	}
 }
+
+func TestCategories(t *testing.T) {
+	for k, v := range Categories() {
+		if category, isValid := Categorize(k); !isValid || category != v {
+			t.Fatalf("Unexpected invalid type detected: %s", k)
+		}
+	}
+}

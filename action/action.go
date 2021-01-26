@@ -32,16 +32,26 @@ const (
 	// Puly Cleaner or a similar descaling agent
 	DescaleBrewGroup = "descale_brew_group"
 
+	// DescalePressureReliefValve denotes a descaling of the pressure relief valve
+	// for the boiler
+	DescalePressureReliefValve = "descale_pressure_relief_valve"
+
+	// DescaleExpansionValve denotes a descaling of the expansion valve
+	// for the brew cycle
+	DescaleExpansionValve = "descale_expansion_valve"
+
 	// DescaleFull denotes a ful descaling of the whole machine,
 	// including replacement of the respective seals
 	DescaleFull = "descale_full"
 )
 
 var categories = map[Type]Category{
-	NewCoffeePack:    Generic,
-	BackFlush:        Maintenance,
-	DescaleBrewGroup: Maintenance,
-	DescaleFull:      Maintenance,
+	NewCoffeePack:              Generic,
+	BackFlush:                  Maintenance,
+	DescaleBrewGroup:           Maintenance,
+	DescalePressureReliefValve: Maintenance,
+	DescaleExpansionValve:      Maintenance,
+	DescaleFull:                Maintenance,
 }
 
 // Categories returns a list of all types and their categories
