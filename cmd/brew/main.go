@@ -20,6 +20,8 @@ type config struct {
 	beansWeightSingle float64
 	beansWeightDouble float64
 	grindSetting      float64
+
+	debug bool
 }
 
 func main() {
@@ -33,9 +35,14 @@ func main() {
 	flag.Float64Var(&cfg.beansWeightDouble, "beansWeightDouble", scanner.DefaultDoubleShotBeansWeight, "Weight of beans / grounds used for a double shot")
 	flag.Float64Var(&cfg.grindSetting, "grindSetting", scanner.DefaultGrindSetting, "Relative grinder setting (0.0: Fine -> 1.0: Coarse)")
 
+	flag.BoolVar(&cfg.debug, "debug", false, "Enable debugging mode (more verbose logging)")
+
 	flag.Parse()
 	if cfg.influxEndpoint == "" {
 		logrus.StandardLogger().Fatalf("No InfluxDB endpoint specified")
+	}
+	if cfg.debug {
+		logrus.StandardLogger().SetLevel(logrus.DebugLevel)
 	}
 
 	s, err := felicita.New()

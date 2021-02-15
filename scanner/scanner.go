@@ -91,6 +91,8 @@ func (s *Scanner) Run() error {
 	// Loop over channel and process each arriving data point
 	for dataPoint := range s.dataChan {
 
+		logrus.StandardLogger().Debugf("Tracking data point %#v (Scale Battery Level: %.2f (raw %d)", dataPoint, s.scale.BatteryLevel(), s.scale.BatteryLevelRaw())
+
 		s.dataBuf.Append(dataPoint)
 		last5 := s.dataBuf.LastN(5)
 
