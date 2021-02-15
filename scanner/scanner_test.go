@@ -78,10 +78,10 @@ func TestScanDataPointsTable(t *testing.T) {
 		expectedWeight      float64
 		expectedShotType    brew.ShotType
 	}{
-		{"standardBrewSingle1", standardBrewSingle1JSON, 242, 47.81, brew.SingleShot},
-		{"standardBrewSingle2", standardBrewSingle2JSON, 242, 61.64, brew.SingleShot},
-		{"standardBrewDouble1", standardBrewDouble1JSON, 235, 86.72, brew.DoubleShot},
-		{"standardBrewDouble2", standardBrewDouble2JSON, 231, 82.23, brew.DoubleShot},
+		{"standardBrewSingle1", standardBrewSingle1JSON, 255, 48.13, brew.SingleShot},
+		{"standardBrewSingle2", standardBrewSingle2JSON, 254, 61.93, brew.SingleShot},
+		{"standardBrewDouble1", standardBrewDouble1JSON, 252, 87.01, brew.DoubleShot},
+		{"standardBrewDouble2", standardBrewDouble2JSON, 256, 82.79, brew.DoubleShot},
 	}
 
 	for _, test := range testTable {

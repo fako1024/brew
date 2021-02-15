@@ -57,7 +57,6 @@ type Scanner struct {
 func New(s scale.Scale, influxDB *influx.DB, options ...func(*Scanner)) *Scanner {
 	scanner := &Scanner{
 		scale:    s,
-		influxDB: influxDB,
 		dataBuf:  buffer.NewDataBuffer(1024),
 		dataChan: make(chan scale.DataPoint, defaultDataChanDepth),
 
@@ -67,6 +66,10 @@ func New(s scale.Scale, influxDB *influx.DB, options ...func(*Scanner)) *Scanner
 		singleShotBeansWeight: DefaultSingleShotBeansWeight,
 		doubleShotBeansWeight: DefaultDoubleShotBeansWeight,
 		grindSetting:          DefaultGrindSetting,
+	}
+
+	if influxDB != nil {
+		scanner.influxDB = influxDB
 	}
 
 	// Execute functional options, if any
@@ -103,7 +106,7 @@ func (s *Scanner) Run() error {
 			}
 		} else {
 			s.currentBrew.DataPoints = append(s.currentBrew.DataPoints, last5[4].(scale.DataPoint))
-			if last5[4].Value()-last5[3].Value() < 0.1 && last5[3].Value()-last5[2].Value() < 0.1 && last5[2].Value()-last5[1].Value() < 0.1 && last5[1].Value()-last5[0].Value() < 0.1 {
+			if lastNStatic(last5, 4, 0.05) {
 				s.currentBrew.End = last5[4].(scale.DataPoint).TimeStamp
 
 				if s.currentBrew.End.Sub(s.currentBrew.Start) < minBrewTime {
@@ -155,27 +158,29 @@ func (s *Scanner) Run() error {
 					}
 
 					// Emit the summary to the influxDB
-					if err := s.influxDB.EmitDataPoints("brews", "summary", db.DataPoints{
-						{
-							TimeStamp: s.currentBrew.Start,
-							Tags:      tags,
-							Data: map[string]interface{}{
-								"start":         s.currentBrew.Start.Unix() * 1000,
-								"end":           s.currentBrew.End.Unix() * 1000,
-								"end_weight":    s.currentBrew.DataPoints[len(s.currentBrew.DataPoints)-1].Weight,
-								"unit":          s.currentBrew.DataPoints[len(s.currentBrew.DataPoints)-1].Unit,
-								"battery_level": s.scale.BatteryLevel(),
-								"beans_weight":  beansWeight,
-								"grind_setting": s.grindSetting,
+					if s.influxDB != nil {
+						if err := s.influxDB.EmitDataPoints("brews", "summary", db.DataPoints{
+							{
+								TimeStamp: s.currentBrew.Start,
+								Tags:      tags,
+								Data: map[string]interface{}{
+									"start":         s.currentBrew.Start.Unix() * 1000,
+									"end":           s.currentBrew.End.Unix() * 1000,
+									"end_weight":    s.currentBrew.DataPoints[len(s.currentBrew.DataPoints)-1].Weight,
+									"unit":          s.currentBrew.DataPoints[len(s.currentBrew.DataPoints)-1].Unit,
+									"battery_level": s.scale.BatteryLevel(),
+									"beans_weight":  beansWeight,
+									"grind_setting": s.grindSetting,
+								},
 							},
-						},
-					}); err != nil {
-						logrus.StandardLogger().Errorf("Failed to emit brew summary to influxDB: %s", err)
-					}
+						}); err != nil {
+							logrus.StandardLogger().Errorf("Failed to emit brew summary to influxDB: %s", err)
+						}
 
-					// Emit the data points to the influxDB
-					if err := s.influxDB.EmitDataPoints("brews", "brew", dataPoints); err != nil {
-						logrus.StandardLogger().Errorf("Failed to emit brew data points to influxDB: %s", err)
+						// Emit the data points to the influxDB
+						if err := s.influxDB.EmitDataPoints("brews", "brew", dataPoints); err != nil {
+							logrus.StandardLogger().Errorf("Failed to emit brew data points to influxDB: %s", err)
+						}
 					}
 				}
 
@@ -196,6 +201,10 @@ func (s *Scanner) Run() error {
 }
 
 func lastNIncreasing(data buffer.DataPoints, n int) bool {
+	return lastNIncreasingBy(data, n, 0.0)
+}
+
+func lastNIncreasingBy(data buffer.DataPoints, n int, change float64) bool {
 
 	// Validate data buffer length is sufficient
 	if len(data) < n {
@@ -209,8 +218,31 @@ func lastNIncreasing(data buffer.DataPoints, n int) bool {
 			return false
 		}
 
-		// Check if data has increased from step i to i+1
-		if data[i+1].Value() <= data[i].Value() {
+		// Check if data has increased from step i to i+1 by change
+		if data[i+1].Value() <= data[i].Value()+change {
+			return false
+		}
+	}
+
+	return true
+}
+
+func lastNStatic(data buffer.DataPoints, n int, maxChange float64) bool {
+
+	// Validate data buffer length is sufficient
+	if len(data) < n {
+		return false
+	}
+
+	for i := 0; i < n; i++ {
+
+		// Check if data point is valid
+		if data[i] == nil || data[i+1] == nil {
+			return false
+		}
+
+		// Check if data has increased from step i to i+1 by change
+		if data[i+1].Value() >= data[i].Value()+maxChange {
 			return false
 		}
 	}
