@@ -8,11 +8,14 @@ import (
 
 	"github.com/fako1024/brew/db/influx"
 	"github.com/fako1024/brew/scanner"
+	"github.com/fako1024/btscale/pkg/api"
 	"github.com/fako1024/btscale/pkg/felicita"
 	"github.com/sirupsen/logrus"
 )
 
 type config struct {
+	apiEndpoint string
+
 	influxEndpoint string
 	influxUser     string
 	influxPassword string
@@ -27,6 +30,9 @@ type config struct {
 func main() {
 
 	var cfg config
+
+	flag.StringVar(&cfg.apiEndpoint, "api", ":8099", "Endpoint for scale API")
+
 	flag.StringVar(&cfg.influxEndpoint, "influxEndpoint", "", "Endpoint for InfluxDB emissions")
 	flag.StringVar(&cfg.influxUser, "influxUser", "root", "User for InfluxDB emissions")
 	flag.StringVar(&cfg.influxPassword, "influxPassword", "root", "Password for InfluxDB emissions")
@@ -48,6 +54,10 @@ func main() {
 	s, err := felicita.New()
 	if err != nil {
 		logrus.StandardLogger().Fatalf("Failed to initialize Felicita scale: %s", err)
+	}
+
+	if cfg.apiEndpoint != "" {
+		api.New(s, cfg.apiEndpoint)
 	}
 
 	sigChan := make(chan os.Signal)
