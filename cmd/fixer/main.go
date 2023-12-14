@@ -9,7 +9,7 @@ import (
 	"github.com/fako1024/brew/action"
 	"github.com/fako1024/brew/db"
 	"github.com/fako1024/brew/db/influx"
-	"github.com/sirupsen/logrus"
+	"github.com/fako1024/btscale/pkg/scale"
 )
 
 const timestampLayout = "2006-01-02T15:04:05"
@@ -52,8 +52,9 @@ func main() {
 	flag.StringVar(&cfg.actionType, "action-type", "", "Type of performed action")
 
 	flag.Parse()
+	logger := scale.NewDefaultLogger(false)
 	if cfg.influxEndpoint == "" {
-		logrus.StandardLogger().Fatalf("No InfluxDB endpoint specified")
+		logger.Fatalf("no InfluxDB endpoint specified")
 	}
 	influxDB := influx.New(
 		cfg.influxEndpoint,
@@ -66,10 +67,10 @@ func main() {
 		if shotTypeStr != "" {
 			cfg.shotType = brew.ShotTypeFromString(shotTypeStr)
 			if cfg.shotType == brew.UnknownShot {
-				logrus.StandardLogger().Fatalf("Invalid shot type specified: %s", shotTypeStr)
+				logger.Fatalf("invalid shot type specified: %s", shotTypeStr)
 			}
 		} else {
-			logrus.StandardLogger().Fatal("No action specified")
+			logger.Fatal("no action specified")
 		}
 
 		if cfg.shotType != brew.UnknownShot {
@@ -84,12 +85,12 @@ func main() {
 			}
 
 			if err := influxDB.ModifyMeasurement("brews", "brew", "id", cfg.id, "shot_type", cfg.shotType.String(), additionalFields); err != nil {
-				logrus.StandardLogger().Fatalf("Failed to alter measurement: %s", err)
+				logger.Fatalf("failed to alter measurement: %s", err)
 			}
 			if err := influxDB.ModifyMeasurement("brews", "summary", "id", cfg.id, "shot_type", cfg.shotType.String(), additionalFields); err != nil {
-				logrus.StandardLogger().Fatalf("Failed to alter measurement summary: %s", err)
+				logger.Fatalf("failed to alter measurement summary: %s", err)
 			}
-			logrus.StandardLogger().Infof("Successfully changed shot type for ID %s to %s", cfg.id, cfg.shotType)
+			logger.Infof("successfully changed shot type for ID %s to %s", cfg.id, cfg.shotType)
 		}
 	}
 
@@ -98,13 +99,13 @@ func main() {
 		// Attempt to parse the action timestamp
 		var err error
 		if cfg.actionTS, err = time.Parse(timestampLayout, timestampStr); err != nil {
-			logrus.StandardLogger().Fatalf("Failed to parse time stamp for action: %s", err)
+			logger.Fatalf("failed to parse time stamp for action: %s", err)
 		}
 
 		// Check if the ation type is supported
 		actionCategory, isValid := action.Categorize(cfg.actionType)
 		if !isValid {
-			logrus.StandardLogger().Fatalf("Invalid action type: %s (supported: %v)", cfg.actionType, action.Categories())
+			logger.Fatalf("invalid action type: %s (supported: %v)", cfg.actionType, action.Categories())
 		}
 
 		if err := influxDB.EmitDataPoints("brews", "actions", db.DataPoints{
@@ -120,7 +121,7 @@ func main() {
 				},
 			},
 		}); err != nil {
-			logrus.StandardLogger().Fatalf("Failed to add action: %s", err)
+			logger.Fatalf("failed to add action: %s", err)
 		}
 	}
 }

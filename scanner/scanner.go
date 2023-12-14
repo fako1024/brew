@@ -10,7 +10,6 @@ import (
 	"github.com/fako1024/brew/db/influx"
 	"github.com/fako1024/btscale/pkg/scale"
 	"github.com/google/uuid"
-	"github.com/sirupsen/logrus"
 )
 
 const (
@@ -51,6 +50,8 @@ type Scanner struct {
 	singleShotBeansWeight    float64
 	doubleShotBeansWeight    float64
 	grindSetting             float64
+
+	logger scale.Logger
 }
 
 // New initializes a new brew scanner instance
@@ -66,6 +67,7 @@ func New(s scale.Scale, influxDB *influx.DB, options ...func(*Scanner)) *Scanner
 		singleShotBeansWeight: DefaultSingleShotBeansWeight,
 		doubleShotBeansWeight: DefaultDoubleShotBeansWeight,
 		grindSetting:          DefaultGrindSetting,
+		logger:                &scale.NullLogger{},
 	}
 
 	if influxDB != nil {
@@ -91,7 +93,7 @@ func (s *Scanner) Run() error {
 	// Loop over channel and process each arriving data point
 	for dataPoint := range s.dataChan {
 
-		logrus.StandardLogger().Debugf("Tracking data point %#v (Scale Battery Level: %.2f (raw %d)", dataPoint, s.scale.BatteryLevel(), s.scale.BatteryLevelRaw())
+		s.logger.Debugf("tracking data point %#v (Scale Battery Level: %.2f (raw %d)", dataPoint, s.scale.BatteryLevel(), s.scale.BatteryLevelRaw())
 
 		s.dataBuf.Append(dataPoint)
 		last5 := s.dataBuf.LastN(5)
@@ -103,7 +105,7 @@ func (s *Scanner) Run() error {
 					Start:      last5[0].(scale.DataPoint).TimeStamp,
 					DataPoints: scale.DataPoints{last5[0].(scale.DataPoint), last5[1].(scale.DataPoint), last5[2].(scale.DataPoint), last5[3].(scale.DataPoint), last5[4].(scale.DataPoint)},
 				}
-				logrus.StandardLogger().Infof("Starting tracking brew: %v", last5[0])
+				s.logger.Infof("starting tracking brew: %v", last5[0])
 				currentlyTrackingBrew = true
 			}
 		} else {
@@ -111,12 +113,12 @@ func (s *Scanner) Run() error {
 			if lastNStatic(last5, 4, 0.05) {
 				s.currentBrew.End = last5[4].(scale.DataPoint).TimeStamp
 
-				if s.currentBrew.End.Sub(s.currentBrew.Start) < minBrewTime {
-					logrus.StandardLogger().Errorf("Brew time too short, ignoring data points")
+				if elapsed := s.currentBrew.End.Sub(s.currentBrew.Start); elapsed < minBrewTime {
+					s.logger.Warnf("brew time too short (%v), ignoring data points", elapsed)
 					currentlyTrackingBrew = false
 					continue
-				} else if s.currentBrew.End.Sub(s.currentBrew.Start) > maxBrewTime {
-					logrus.StandardLogger().Errorf("Brew time too long, ignoring data points")
+				} else if elapsed > maxBrewTime {
+					s.logger.Warnf("brew time too long (%v), ignoring data points", elapsed)
 					currentlyTrackingBrew = false
 					continue
 				}
@@ -130,7 +132,7 @@ func (s *Scanner) Run() error {
 				}
 
 				// If brew was successfully tracked, store data into InfluxDB
-				logrus.StandardLogger().Infof("Finished tracking brew: %#v", s.currentBrew)
+				s.logger.Infof("finished tracking brew: %#v", s.currentBrew)
 				if s.influxDB != nil {
 
 					// Generate tags
@@ -176,12 +178,12 @@ func (s *Scanner) Run() error {
 								},
 							},
 						}); err != nil {
-							logrus.StandardLogger().Errorf("Failed to emit brew summary to influxDB: %s", err)
+							s.logger.Errorf("failed to emit brew summary to influxDB: %s", err)
 						}
 
 						// Emit the data points to the influxDB
 						if err := s.influxDB.EmitDataPoints("brews", "brew", dataPoints); err != nil {
-							logrus.StandardLogger().Errorf("Failed to emit brew data points to influxDB: %s", err)
+							s.logger.Errorf("failed to emit brew data points to influxDB: %s", err)
 						}
 					}
 				}
@@ -189,14 +191,6 @@ func (s *Scanner) Run() error {
 				currentlyTrackingBrew = false
 			}
 		}
-
-		// jsonData, err := jsoniter.Marshal(dataPoint)
-		// if err != nil {
-		// 	logrus.StandardLogger().Errorf("Error parsing data point %#v: %s", *dataPoint, err)
-		// 	continue
-		// }
-		//
-		// logrus.StandardLogger().Infof("%s", string(jsonData))
 	}
 
 	return nil

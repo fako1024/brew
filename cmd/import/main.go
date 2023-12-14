@@ -10,7 +10,7 @@ import (
 
 	"github.com/fako1024/brew/db"
 	"github.com/fako1024/brew/db/influx"
-	"github.com/sirupsen/logrus"
+	"github.com/fako1024/btscale/pkg/scale"
 )
 
 const timestampLayout = "2006-01-02T15:04:05"
@@ -38,8 +38,9 @@ func main() {
 	flag.StringVar(&cfg.influxPassword, "influxPassword", "root", "Password for InfluxDB emissions")
 
 	flag.Parse()
+	logger := scale.NewDefaultLogger(false)
 	if cfg.influxEndpoint == "" {
-		logrus.StandardLogger().Fatalf("No InfluxDB endpoint specified")
+		logger.Fatalf("no InfluxDB endpoint specified")
 	}
 	influxDB := influx.New(
 		cfg.influxEndpoint,
@@ -50,7 +51,7 @@ func main() {
 	// Open the file
 	csvData, err := os.Open(cfg.csvFile)
 	if err != nil {
-		logrus.StandardLogger().Fatalf("Failed to open CSV file: %s", err)
+		logger.Fatalf("failed to open CSV file: %s", err)
 	}
 	defer csvData.Close()
 
@@ -66,10 +67,10 @@ func main() {
 			break
 		}
 		if err != nil {
-			logrus.StandardLogger().Fatalf("Failed to read record from CSV file: %s", err)
+			logger.Fatalf("failed to read record from CSV file: %s", err)
 		}
 		if len(record) != 10 {
-			logrus.StandardLogger().Fatalf("Unexpected number of columns in CSV file")
+			logger.Fatalf("unexpected number of columns in CSV file")
 		}
 
 		// Field order: ID, shot_type, start, end, end_weight, unit, battery_level, beans_weight, grind_setting, start_ns
@@ -78,31 +79,31 @@ func main() {
 		id, shotType, unit := record[0], record[1], record[5]
 		start, err := strconv.ParseInt(record[2], 10, 64)
 		if err != nil {
-			logrus.StandardLogger().Fatalf("Failed to parse `start` column from CSV file: %s", err)
+			logger.Fatalf("failed to parse `start` column from CSV file: %s", err)
 		}
 		end, err := strconv.ParseInt(record[3], 10, 64)
 		if err != nil {
-			logrus.StandardLogger().Fatalf("Failed to parse `end` column from CSV file: %s", err)
+			logger.Fatalf("failed to parse `end` column from CSV file: %s", err)
 		}
 		endWeight, err := strconv.ParseFloat(record[4], 64)
 		if err != nil {
-			logrus.StandardLogger().Fatalf("Failed to parse `end_weight` column from CSV file: %s", err)
+			logger.Fatalf("failed to parse `end_weight` column from CSV file: %s", err)
 		}
 		batterylevel, err := strconv.ParseFloat(record[6], 64)
 		if err != nil {
-			logrus.StandardLogger().Fatalf("Failed to parse `battery_level` column from CSV file: %s", err)
+			logger.Fatalf("failed to parse `battery_level` column from CSV file: %s", err)
 		}
 		beansWeight, err := strconv.ParseFloat(record[7], 64)
 		if err != nil {
-			logrus.StandardLogger().Fatalf("Failed to parse `beans_weight` column from CSV file: %s", err)
+			logger.Fatalf("failed to parse `beans_weight` column from CSV file: %s", err)
 		}
 		grindSetting, err := strconv.ParseFloat(record[8], 64)
 		if err != nil {
-			logrus.StandardLogger().Fatalf("Failed to parse `grind_setting` column from CSV file: %s", err)
+			logger.Fatalf("failed to parse `grind_setting` column from CSV file: %s", err)
 		}
 		startNS, err := strconv.ParseInt(record[9], 10, 64)
 		if err != nil {
-			logrus.StandardLogger().Fatalf("Failed to parse `start_ns` column from CSV file: %s", err)
+			logger.Fatalf("failed to parse `start_ns` column from CSV file: %s", err)
 		}
 
 		// Generate tags
@@ -127,7 +128,7 @@ func main() {
 				},
 			},
 		}); err != nil {
-			logrus.StandardLogger().Errorf("Failed to emit brew summary to influxDB: %s", err)
+			logger.Errorf("failed to emit brew summary to influxDB: %s", err)
 		}
 	}
 

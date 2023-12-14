@@ -6,7 +6,7 @@ import (
 	"os"
 
 	"github.com/fako1024/brew/db/influx"
-	"github.com/sirupsen/logrus"
+	"github.com/fako1024/btscale/pkg/scale"
 )
 
 const timestampLayout = "2006-01-02T15:04:05"
@@ -34,8 +34,9 @@ func main() {
 	flag.StringVar(&cfg.influxPassword, "influxPassword", "root", "Password for InfluxDB emissions")
 
 	flag.Parse()
+	logger := scale.NewDefaultLogger(false)
 	if cfg.influxEndpoint == "" {
-		logrus.StandardLogger().Fatalf("No InfluxDB endpoint specified")
+		logger.Fatalf("no InfluxDB endpoint specified")
 	}
 	influxDB := influx.New(
 		cfg.influxEndpoint,
@@ -46,14 +47,14 @@ func main() {
 	// Open the file
 	csvData, err := os.OpenFile(cfg.csvFile, os.O_CREATE|os.O_WRONLY, 0660)
 	if err != nil {
-		logrus.StandardLogger().Fatalf("Failed to open CSV file: %s", err)
+		logger.Fatalf("failed to open CSV file: %s", err)
 	}
 	defer csvData.Close()
 
 	// Retrieve the measurements
 	rows, err := influxDB.FetchMeasurementsTable("brews", "summary", "id", "shot_type", "start", "end", "end_weight", "unit", "battery_level", "beans_weight", "grind_setting")
 	if err != nil {
-		logrus.StandardLogger().Fatalf("Failed to perform query: %s", err)
+		logger.Fatalf("failed to perform query: %s", err)
 	}
 
 	w := csv.NewWriter(csvData)
@@ -62,7 +63,7 @@ func main() {
 	for _, row := range rows {
 
 		if len(row) != 10 {
-			logrus.StandardLogger().Fatalf("Unexpected number of columns in measurement list")
+			logger.Fatalf("unexpected number of columns in measurement list")
 		}
 
 		// As the query returns the timestamp first, move it to end of csv
@@ -71,7 +72,7 @@ func main() {
 		row = append(row, x)
 
 		if err := w.Write(row); err != nil {
-			logrus.StandardLogger().Fatalf("Failed to write record %v: %s", row, err)
+			logger.Fatalf("failed to write record %v: %s", row, err)
 		}
 	}
 
