@@ -5,12 +5,14 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"github.com/fako1024/brew/db/influx"
 	"github.com/fako1024/brew/scanner"
 	"github.com/fako1024/btscale/pkg/api"
 	"github.com/fako1024/btscale/pkg/felicita"
-	"github.com/sirupsen/logrus"
+	"github.com/fako1024/btscale/pkg/scale"
+	"github.com/fako1024/gatt"
 )
 
 type config struct {
@@ -44,29 +46,49 @@ func main() {
 	flag.BoolVar(&cfg.debug, "debug", false, "Enable debugging mode (more verbose logging)")
 
 	flag.Parse()
+	logger := scale.NewDefaultLogger(cfg.debug)
+
 	if cfg.influxEndpoint == "" {
-		logrus.StandardLogger().Fatalf("No InfluxDB endpoint specified")
-	}
-	if cfg.debug {
-		logrus.StandardLogger().SetLevel(logrus.DebugLevel)
+		logger.Fatalf("no InfluxDB endpoint specified")
 	}
 
-	s, err := felicita.New()
+	btDevice, err := gatt.NewDevice([]gatt.Option{
+		gatt.LnxMaxConnections(2),
+		gatt.LnxDeviceID(-1, true),
+		gatt.LnxMsgTimeout(10 * time.Second),
+	}...)
 	if err != nil {
-		logrus.StandardLogger().Fatalf("Failed to initialize Felicita scale: %s", err)
+		logger.Fatalf("failed to initialize bluetooth system device: %s", err)
 	}
+
+	s, err := felicita.New(felicita.WithDevice(btDevice), felicita.WithDeviceID("C8:FD:19:8E:3E:3C"), felicita.WithLogger(logger))
+	if err != nil {
+		logger.Fatalf("failed to initialize Felicita scale: %s", err)
+	}
+	sStateChan := make(chan scale.ConnectionStatus)
+	s.SetStateChangeChannel(sStateChan)
+	go func() {
+		for st := range sStateChan {
+			logger.Infof("scale state change: %v", st)
+		}
+	}()
 
 	if cfg.apiEndpoint != "" {
 		api.New(s, cfg.apiEndpoint)
 	}
 
-	sigChan := make(chan os.Signal)
+	sigChan := make(chan os.Signal, 3)
 	signal.Notify(sigChan, syscall.SIGTERM)
 	signal.Notify(sigChan, os.Interrupt)
 	go func() {
 		<-sigChan
-		logrus.StandardLogger().Infof("Got signal, terminating connection to scale")
-		s.Close()
+		logger.Infof("got signal, terminating connection to scale / meater")
+		if err := s.Close(); err != nil {
+			logger.Errorf("failed to close scale: %s", err)
+		}
+		if err := btDevice.Close(); err != nil {
+			logger.Errorf("failed to stop bluetooth device: %s", err)
+		}
 		os.Exit(0)
 	}()
 
@@ -79,9 +101,10 @@ func main() {
 		scanner.WithSingleShotBeansWeight(cfg.beansWeightSingle),
 		scanner.WithDoubleShotBeansWeight(cfg.beansWeightDouble),
 		scanner.WithGrindSetting(cfg.grindSetting),
+		scanner.WithLogger(logger),
 	)
 
 	if err := scan.Run(); err != nil {
-		logrus.StandardLogger().Fatalf("Failed to scan for data: %s", err)
+		logger.Fatalf("failed to scan for data: %s", err)
 	}
 }
