@@ -13,7 +13,7 @@ require (
 require (
 	github.com/andybalholm/brotli v1.1.0 // indirect
 	github.com/fatih/stopwatch v1.0.0 // indirect
-	github.com/gofiber/fiber/v2 v2.52.12 // indirect
+	github.com/gofiber/fiber/v2 v2.52.13 // indirect
 	github.com/klauspost/compress v1.17.9 // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
